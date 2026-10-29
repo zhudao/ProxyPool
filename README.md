@@ -222,6 +222,27 @@ get random proxy 116.196.115.209:8080
 
 可以看到成功获取了代理，并请求 httpbin.org 验证了代理的可用性。
 
+### 获取多个代理
+
+如果一次需要多个代理，可以给 `/random` 接口传入 `count` 参数，一次返回多个随机代理（每行一个）：
+
+```
+GET http://localhost:5555/random?count=5
+```
+
+`count` 不传或为 1 时行为不变，仍返回单个代理；`count` 大于可用数量时返回全部可用代理。也可与 `key` 参数组合使用。
+
+### 按地区（国家）筛选代理
+
+可以给 `/random` 和 `/all` 接口传入 `area` 参数，按代理 IP 所属国家筛选（ISO 国家码，大小写不敏感），例如只获取国内（中国）代理：
+
+```
+GET http://localhost:5555/random?area=CN
+GET http://localhost:5555/all?area=CN
+```
+
+国家信息由内置的 GeoLite2 离线库解析，无法解析归属地的代理会被排除。`area` 可与 `count`、`key` 参数组合使用。
+
 ## 可配置项
 
 代理池可以通过设置环境变量来配置一些参数。
@@ -256,9 +277,14 @@ get random proxy 116.196.115.209:8080
 - TEST_TIMEOUT：测试超时时间，默认 10 秒
 - TEST_BATCH：批量测试数量，默认 20 个代理
 - TEST_VALID_STATUS：测试有效的状态码
+- TEST_ANONYMOUS：是否只保留匿名代理，默认 true
+- TEST_ANONYMOUS_URL：匿名 / 出口 IP 检测地址，默认 `https://httpbin.org/ip`，需返回 httpbin 格式的 JSON（`{"origin": "1.2.3.4"}`）。可指向自建 httpbin 服务以避免公共服务限流
 - API_HOST：代理 Server 运行 Host，默认 0.0.0.0
 - API_PORT：代理 Server 运行端口，默认 5555
 - API_THREADED：代理 Server 是否使用多线程，默认 true
+- API_KEY：API 访问鉴权密钥，默认空（即不鉴权）。设置后，调用 `/random`、`/all`、`/count` 需在请求头携带 `API-KEY`，详见下方「安全性」说明
+
+> ⚠️ 安全提示：代理 Server 默认监听 `0.0.0.0` 且 `API_KEY` 默认为空，任何能访问该端口的人都可以调用 `/random`、`/all`、`/count`。如果将代理池**暴露到公网**，请务必设置 `API_KEY`，并配合防火墙/安全组限制来源。`key` 查询参数已做格式校验，仅允许字母、数字及 `_ : -`，最长 64 位。
 
 ### 日志
 
